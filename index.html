@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=2.0">
+    <title>🔬 铁碳相图 · 标注修复版 (H/B分离)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', '微软雅黑', system-ui, sans-serif;
+        }
+        body {
+            background: #f0f4f8;
+            margin: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: white;
+            border-radius: 28px;
+            padding: 20px 16px 24px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.06);
+        }
+        h1 {
+            font-size: clamp(1.4rem, 5vw, 1.9rem);
+            color: #0b2b40;
+            margin: 0 0 6px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+        }
+        h1 small {
+            font-size: 0.8rem;
+            background: #dbeafe;
+            color: #1e4bd2;
+            padding: 4px 14px;
+            border-radius: 40px;
+        }
+        .subtitle {
+            color: #475569;
+            margin-bottom: 18px;
+            border-left: 5px solid #b45309;
+            padding-left: 16px;
+        }
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 20px;
+            align-items: start;
+        }
+        @media (max-width: 800px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .left-col {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .canvas-container {
+            text-align: center;
+            position: relative;
+            background: #f9fafb;
+            border-radius: 20px;
+            padding: 10px;
+            border: 1px solid #e2e8f0;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 16px;
+            background: white;
+            max-width: 100%;
+            height: auto;
+            touch-action: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+        }
+        #phaseCanvas {
+            cursor: crosshair;
+        }
+        .tooltip {
+            position: fixed;
+            background: #0b1e2e;
+            color: #f8fafc;
+            padding: 10px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            pointer-events: none;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            z-index: 999;
+            border-left: 5px solid #eab308;
+            max-width: 280px;
+            opacity: 0;
+            transition: opacity 0.1s;
+            word-break: break-word;
+        }
+        .btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            margin-top: 4px;
+        }
+        .btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
+        }
+        .btn.active {
+            background: #1e4bd2;
+            color: white;
+            border-color: #1e4bd2;
+        }
+        .btn:hover {
+            background: #f1f5f9;
+        }
+        .btn.active:hover {
+            background: #1e3a8a;
+        }
+        .lever-calc {
+            background: #f8fafc;
+            border-radius: 20px;
+            padding: 14px;
+            border: 1px solid #dbeafe;
+        }
+        .lever-calc h3 {
+            margin: 0 0 8px;
+            font-size: 1rem;
+            color: #0b2b40;
+        }
+        .formula-box {
+            background: #fff;
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+            border: 1px solid #e2e8f0;
+            color: #334155;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .formula-col {
+            flex: 1 1 200px;
+        }
+        .calc-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .calc-row input {
+            width: 90px;
+            padding: 8px 10px;
+            border-radius: 30px;
+            border: 1px solid #cbd5e1;
+            text-align: center;
+            font-weight: 600;
+        }
+        #leverResult {
+            background: #eef2ff;
+            padding: 10px 14px;
+            border-radius: 16px;
+            font-weight: 600;
+            flex: 1;
+            min-width: 200px;
+        }
+        .right-col {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            border: 1px solid #e2e8f0;
+        }
+        .cooling-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            background: #f1f5f9;
+            padding: 6px;
+            border-radius: 48px;
+            margin-bottom: 10px;
+        }
+        .cooling-btn {
+            background: transparent;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 40px;
+            font-weight: 600;
+            color: #1e293b;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.15s;
+        }
+        .cooling-btn.active {
+            background: #1e4bd2;
+            color: white;
+        }
+        .slider-block {
+            background: #eef2ff;
+            padding: 12px 16px;
+            border-radius: 50px;
+            margin: 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .slider-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+        }
+        .slider-item input {
+            flex: 1;
+            accent-color: #b45309;
+        }
+        .phase-table {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 8px;
+            font-size: 0.8rem;
+            overflow-x: auto;
+            margin-top: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        td, th {
+            padding: 6px 4px;
+            border-bottom: 1px solid #d1d9e6;
+        }
+        .footer {
+            margin-top: 20px;
+            color: #64748b;
+            font-size: 0.75rem;
+            text-align: center;
+        }
+        #message {
+            color: #2563eb;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🧪 Fe-Fe₃C · 交互式相图 <small>共晶虚线 · 白口铁杠杆</small></h1>
+    <div class="subtitle">👆 悬停相图 → 实时计算组织比例 · 点击选成分 · 包晶/共晶/共析线已标注</div>
+
+    <div class="main-grid">
+        <!-- 左侧：相图 + 控件 + 杠杆计算器 -->
+        <div class="left-col">
+            <div class="canvas-container">
+                <canvas id="phaseCanvas" width="800" height="600"></canvas>
+                <div id="tooltip" class="tooltip"></div>
+            </div>
+            <!-- 四个控件直接放在相图下方 -->
+            <div class="btn-row">
+                <button id="pathModeBtn" class="btn">✏️ 绘制冷却路径</button>
+                <button id="clearPathBtn" class="btn" style="display:none;">🗑️ 清除当前路径</button>
+                <button id="clearAllPathsBtn" class="btn">🧹 清除所有路径</button>
+                <button id="shareBtn" class="btn">🔗 分享链接</button>
+                <button id="exportBtn" class="btn">📸 截图导出</button>
+                <span id="message"></span>
+            </div>
+
+            <!-- 杠杆定律计算器 (包含白口铁信息) -->
+            <div class="lever-calc" id="leverCalculator">
+                <h3>📐 杠杆定律 · 实时计算 (悬停自动更新)</h3>
+                <div class="formula-box">
+                    <div class="formula-col">
+                        <strong>亚共析钢 (C&lt;0.77%)</strong><br>
+                        F% = (0.77 - C) / (0.77 - 0.0218) × 100%<br>
+                        P% = (C - 0.0218) / (0.77 - 0.0218) × 100%
+                    </div>
+                    <div class="formula-col">
+                        <strong>过共析钢 (0.77&lt;C≤2.11%)</strong><br>
+                        Fe₃CⅡ% = (C - 0.77) / (6.69 - 0.77) × 100%<br>
+                        P% = (6.69 - C) / (6.69 - 0.77) × 100%
+                    </div>
+                    <div class="formula-col">
+                        <strong>白口铁 (C&gt;2.11%)</strong><br>
+                        亚共晶：初生γ% = (4.3-C)/(4.3-2.11)<br>
+                        过共晶：初生Fe₃CⅠ% = (C-4.3)/(6.69-4.3)
+                    </div>
+                </div>
+                <div class="calc-row">
+                    <span>当前碳含量 C% =</span>
+                    <input type="number" id="calcInput" value="0.45" step="0.01" min="0" max="6.69">
+                    <div id="leverResult">铁素体 F 54.0% · 珠光体 P 46.0%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：冷却曲线控制区 -->
+        <div class="right-col">
+            <div style="font-weight:700; font-size:1.1rem; margin-bottom:6px;">📉 连续冷却曲线 (CCT)</div>
+            <div class="cooling-selector" id="coolingRateGroup">
+                <button class="cooling-btn active" data-rate="furnace">🔥炉冷</button>
+                <button class="cooling-btn" data-rate="air">🌬️空冷</button>
+                <button class="cooling-btn" data-rate="oil">🛢️油冷</button>
+                <button class="cooling-btn" data-rate="water">💧水冷</button>
+            </div>
+            <canvas id="coolingCanvas" width="360" height="300"></canvas>
+            <div class="slider-block">
+                <div class="slider-item">
+                    <label>碳含量</label>
+                    <input type="range" id="carbonSlider" min="0.0" max="6.69" value="0.45" step="0.01">
+                    <span id="carbonValue">0.45%</span>
+                </div>
+            </div>
+            <div class="phase-table">
+                <table>
+                    <thead><tr><th>相变点</th><th>℃</th><th>说明</th></tr></thead>
+                    <tbody id="phaseTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="footer">⚡ 共晶白口铁虚线 · 白口铁杠杆计算 · H/B点分离 · 完美交互</div>
+</div>
+
+<script>
+    (function() {
+        const canvas = document.getElementById('phaseCanvas');
+        const ctx = canvas.getContext('2d');
+        const tooltip = document.getElementById('tooltip');
+        const coolCanvas = document.getElementById('coolingCanvas');
+        const cctx = coolCanvas.getContext('2d');
+
+        const C_MIN = 0, C_MAX = 6.69;
+        const T_MIN = 0, T_MAX = 1600;
+        const pad = { left: 80, right: 40, top: 30, bottom: 60 };
+        const graphW = canvas.width - pad.left - pad.right;
+        const graphH = canvas.height - pad.top - pad.bottom;
+
+        function toCanvasX(c) {
+            c = Math.min(C_MAX, Math.max(C_MIN, c || 0));
+            return pad.left + (c - C_MIN) / (C_MAX - C_MIN) * graphW;
+        }
+        function toCanvasY(T) {
+            T = Math.min(T_MAX, Math.max(T_MIN, T || 0));
+            return pad.top + (T_MAX - T) / (T_MAX - T_MIN) * graphH;
+        }
+        function toPhaseX(px) { return Math.min(C_MAX, Math.max(C_MIN, C_MIN + (px - pad.left) / graphW * (C_MAX - C_MIN))); }
+        function toPhaseY(py) { return Math.min(T_MAX, Math.max(T_MIN, T_MAX - (py - pad.top) / graphH * (T_MAX - T_MIN))); }
+
+        const pts = {
+            A:[0,1538], N:[0,1394], G:[0,912], P:[0.0218,727], S:[0.77,727],
+            E:[2.11,1148], C:[4.3,1148], F:[6.69,1148], K:[6.69,727], D:[6.69,1227],
+            H:[0.09,1495], B:[0.53,1495]
+        };
+
+        const regions = [];
+        function addRegion(n,c,poly,d,rc,rt){ if(poly&&poly.length>=3) regions.push({name:n,color:c,points:poly,desc:d,rangeC:rc,rangeT:rt}); }
+        addRegion('液相 L','#E8E8E8',[[0,1600],[0,1538],pts.A,pts.B,[4.3,1148],pts.D,[6.69,1600]],'液溶体','0~6.69%','1148~1600°C');
+        addRegion('δ-铁素体','#FFF3C4',[[0,1538],[0,1394],pts.N,pts.H,[0.09,1495],pts.B,pts.A],'bcc高温','<0.09%','1394~1538°C');
+        addRegion('奥氏体 A','#FFD6D6',[pts.N,pts.G,pts.P,pts.S,pts.E,[2.11,1148],[0.09,1495],pts.H,pts.N],'fcc γ','0~2.11%','727~1495°C');
+        addRegion('铁素体 F','#D6EFFF',[pts.G,[0,727],pts.P,pts.G],'bcc α','<0.0218%','<912°C');
+        addRegion('渗碳体 Fe₃C','#D6FFD6',[pts.K,[6.69,0],[6.69,727],pts.K],'Fe₃C','6.69%','<727°C');
+        addRegion('L+δ','#e3d9b8',[pts.A,pts.B,[0.53,1495],[0.09,1495],pts.H,[0,1495],[0,1538],pts.A],'','0~0.53%','1495~1538°C');
+        addRegion('L+γ','#e6cfc9',[pts.B,[4.3,1148],pts.C,pts.E,[2.11,1148],[0.09,1495],pts.B],'','0.09~4.3%','1148~1495°C');
+        addRegion('L+Fe₃C','#d4d4c7',[pts.C,[6.69,1148],pts.F,pts.D,[6.69,1227],pts.C],'','4.3~6.69%','1148~1227°C');
+        addRegion('δ+γ','#f0e1b5',[pts.N,pts.H,[0.09,1495],[0,1495],[0,1394],pts.N],'','<0.09%','1394~1495°C');
+        addRegion('A+F','#e1c6d0',[pts.G,pts.P,pts.S,[0.4,800],[0.2,860],pts.G],'奥氏体+铁素体','0.0218~0.77%','727~912°C');
+        addRegion('A+Fe₃C','#cfd6be',[pts.S,pts.E,[2.11,1148],[2.11,727],pts.S],'奥氏体+渗碳体','0.77~2.11%','727~1148°C');
+        addRegion('F+Fe₃C','#c0dcc0',[pts.P,pts.S,pts.K,[6.69,0],[0,0],[0,727],pts.P],'铁素体+渗碳体','0.0218~6.69%','<727°C');
+
+        let pathMode = false;
+        let currentPath = [];
+        let savedPaths = [];
+        let annotations = [];
+        let draggingAnnotation = null;
+        let dragOffsetX = 0, dragOffsetY = 0;
+
+        function drawPhase() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            regions.forEach(r => {
+                ctx.beginPath();
+                const poly = r.points;
+                ctx.moveTo(toCanvasX(poly[0][0]), toCanvasY(poly[0][1]));
+                for (let i = 1; i < poly.length; i++) ctx.lineTo(toCanvasX(poly[i][0]), toCanvasY(poly[i][1]));
+                ctx.closePath();
+                ctx.fillStyle = r.color;
+                ctx.fill();
+                ctx.strokeStyle = '#aaa';
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+            });
+            ctx.beginPath(); ctx.moveTo(toCanvasX(0), toCanvasY(912));
+            ctx.quadraticCurveTo(toCanvasX(0.3), toCanvasY(800), toCanvasX(0.77), toCanvasY(727));
+            ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2.2; ctx.stroke();
+            ctx.lineWidth = 2.2; ctx.strokeStyle = '#1e293b';
+            ctx.beginPath(); ctx.moveTo(toCanvasX(0), toCanvasY(1538)); ctx.lineTo(toCanvasX(0.53), toCanvasY(1495)); ctx.lineTo(toCanvasX(4.3), toCanvasY(1148)); ctx.lineTo(toCanvasX(6.69), toCanvasY(1227)); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(toCanvasX(0), toCanvasY(1538)); ctx.lineTo(toCanvasX(0.09), toCanvasY(1495)); ctx.lineTo(toCanvasX(2.11), toCanvasY(1148)); ctx.lineTo(toCanvasX(4.3), toCanvasY(1148)); ctx.lineTo(toCanvasX(6.69), toCanvasY(1148)); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(toCanvasX(0.0218), toCanvasY(727)); ctx.lineTo(toCanvasX(6.69), toCanvasY(727)); ctx.strokeStyle = '#b91c1c'; ctx.lineWidth = 2.5; ctx.stroke();
+
+            // 包晶线 (文字下移)
+            ctx.beginPath(); ctx.moveTo(toCanvasX(0.09), toCanvasY(1495)); ctx.lineTo(toCanvasX(0.53), toCanvasY(1495));
+            ctx.strokeStyle = '#0f766e'; ctx.lineWidth = 3; ctx.setLineDash([6,3]); ctx.stroke(); ctx.setLineDash([]);
+            ctx.fillStyle = '#0f766e'; ctx.font = 'bold 11px "Segoe UI"'; ctx.fillText('包晶线 1495℃', toCanvasX(0.3), toCanvasY(1495)+14);
+            // 共晶线
+            ctx.beginPath(); ctx.moveTo(toCanvasX(2.11), toCanvasY(1148)); ctx.lineTo(toCanvasX(6.69), toCanvasY(1148));
+            ctx.strokeStyle = '#a16207'; ctx.lineWidth = 3; ctx.setLineDash([6,3]); ctx.stroke(); ctx.setLineDash([]);
+            ctx.fillStyle = '#a16207'; ctx.fillText('共晶线 1148℃', toCanvasX(4.5), toCanvasY(1148)-8);
+            // 共析线
+            ctx.fillStyle = '#b91c1c'; ctx.fillText('共析线 727℃ (A₁)', toCanvasX(3.8), toCanvasY(727)-8);
+
+            // 钢种虚线 (0.77% 和 2.11%)
+            ctx.beginPath();
+            ctx.moveTo(toCanvasX(0.77), toCanvasY(727)); ctx.lineTo(toCanvasX(0.77), toCanvasY(0));
+            ctx.strokeStyle = '#6b21a8'; ctx.lineWidth = 1.8; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+            ctx.fillStyle = '#6b21a8'; ctx.font = 'bold 10px "Segoe UI"'; ctx.fillText('共析钢 0.77%', toCanvasX(0.77)+5, toCanvasY(400));
+            ctx.beginPath();
+            ctx.moveTo(toCanvasX(2.11), toCanvasY(1148)); ctx.lineTo(toCanvasX(2.11), toCanvasY(0));
+            ctx.strokeStyle = '#b45309'; ctx.lineWidth = 1.8; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+            ctx.fillStyle = '#b45309'; ctx.fillText('钢/铁分界 2.11%', toCanvasX(2.11)+5, toCanvasY(600));
+
+            // 共晶白口铁虚线 (4.3%)
+            ctx.beginPath();
+            ctx.moveTo(toCanvasX(4.3), toCanvasY(1148));
+            ctx.lineTo(toCanvasX(4.3), toCanvasY(0));
+            ctx.strokeStyle = '#16a34a';
+            ctx.lineWidth = 1.8;
+            ctx.setLineDash([4,4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#16a34a';
+            ctx.font = 'bold 10px "Segoe UI"';
+            ctx.fillText('共晶白口铁 4.3%', toCanvasX(4.3)+5, toCanvasY(600));
+
+            // 路径绘制
+            savedPaths.forEach(path => {
+                if (path.length < 2) return;
+                ctx.beginPath(); ctx.strokeStyle = '#8b5cf6'; ctx.lineWidth = 3; ctx.setLineDash([5,3]);
+                for (let i = 0; i < path.length; i++) {
+                    const x = toCanvasX(path[i].c), y = toCanvasY(path[i].t);
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                }
+                ctx.stroke(); ctx.setLineDash([]);
+                const last = path[path.length-1], prev = path[path.length-2];
+                if (prev) drawArrow(toCanvasX(prev.c), toCanvasY(prev.t), toCanvasX(last.c), toCanvasY(last.t));
+            });
+            if (currentPath.length > 1) {
+                ctx.beginPath(); ctx.strokeStyle = '#f97316'; ctx.lineWidth = 3; ctx.setLineDash([5,3]);
+                for (let i = 0; i < currentPath.length; i++) {
+                    const x = toCanvasX(currentPath[i].c), y = toCanvasY(currentPath[i].t);
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                }
+                ctx.stroke(); ctx.setLineDash([]);
+                const last = currentPath[currentPath.length-1], prev = currentPath[currentPath.length-2];
+                if (prev) drawArrow(toCanvasX(prev.c), toCanvasY(prev.t), toCanvasX(last.c), toCanvasY(last.t));
+            }
+            annotations.forEach(ann => {
+                const x = toCanvasX(ann.c), y = toCanvasY(ann.t);
+                ctx.font = 'bold 13px "Segoe UI", "微软雅黑"';
+                const metrics = ctx.measureText(ann.text);
+                const tw = metrics.width + 12, th = 24;
+                ctx.fillStyle = '#ffffffdd';
+                ctx.fillRect(x - tw/2, y - th - 8, tw, th);
+                ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1.5;
+                ctx.strokeRect(x - tw/2, y - th - 8, tw, th);
+                ctx.fillStyle = '#000';
+                ctx.fillText(ann.text, x - tw/2 + 6, y - 12);
+                ctx.beginPath(); ctx.arc(x, y, 4, 0, 2*Math.PI); ctx.fillStyle = '#dc2626'; ctx.fill();
+                ctx.strokeStyle = 'white'; ctx.lineWidth = 1; ctx.stroke();
+            });
+            ctx.font = 'italic 16px "Segoe UI", "微软雅黑"'; ctx.fillStyle = '#1e293bcc';
+            ctx.fillText('L', toCanvasX(3.5), toCanvasY(1450)); ctx.fillText('δ', toCanvasX(0.06), toCanvasY(1470));
+            ctx.fillText('γ (A)', toCanvasX(1.2), toCanvasY(1000)); ctx.fillText('α (F)', toCanvasX(0.03), toCanvasY(450));
+            ctx.fillText('Fe₃C', toCanvasX(6.6), toCanvasY(380));
+            ctx.font = 'bold 13px "Segoe UI", "微软雅黑"'; ctx.fillStyle = '#000';
+            const labelPoints = [
+                [0,1538,'A (1538℃)'],[0,912,'G (912℃)'],[0.0218,727,'P (727℃)'],
+                [0.77,727,'S (727℃)'],[2.11,1148,'E (1148℃)'],[4.3,1148,'C (1148℃)'],
+                [6.69,727,'K (727℃)'],[0.09,1495,'H (1495℃)'],[0.53,1495,'B (1495℃)']
+            ];
+            labelPoints.forEach(([c,t,label]) => {
+                let x = toCanvasX(c), y = toCanvasY(t);
+                if (c === 0.0218 && t === 727) y += 12;
+                if (c === 0.77 && t === 727) x += 10;
+                if (c === 2.11 && t === 1148) x -= 8;
+                if (c === 4.3 && t === 1148) y -= 10;
+                if (c === 0.09 && t === 1495) { x -= 4; } // H点稍微左移
+                if (c === 0.53 && t === 1495) { x += 18; y -= 4; } // B点大幅右移并微调纵坐标
+                ctx.fillText(label, x+8, y-6);
+            });
+        }
+
+        function drawArrow(x1,y1,x2,y2){
+            const angle = Math.atan2(y2-y1, x2-x1);
+            const len = 10;
+            ctx.fillStyle = ctx.strokeStyle;
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - len * Math.cos(angle - Math.PI/6), y2 - len * Math.sin(angle - Math.PI/6));
+            ctx.lineTo(x2 - len * Math.cos(angle + Math.PI/6), y2 - len * Math.sin(angle + Math.PI/6));
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function pointInPoly(px,py,poly){
+            if(!poly) return false;
+            let inside=false;
+            for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+                const xi=poly[i][0],yi=poly[i][1],xj=poly[j][0],yj=poly[j][1];
+                if(isNaN(xi)||isNaN(yi)) continue;
+                if(((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/(yj-yi)+xi)) inside=!inside;
+            }
+            return inside;
+        }
+
+        function handleMove(e){
+            e.preventDefault();
+            if (pathMode || draggingAnnotation) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width/rect.width, scaleY = canvas.height/rect.height;
+            let cx,cy;
+            if(e.touches){ cx=e.touches[0].clientX; cy=e.touches[0].clientY; }
+            else { cx=e.clientX; cy=e.clientY; }
+            const canvasX = (cx - rect.left)*scaleX, canvasY = (cy - rect.top)*scaleY;
+            if(canvasX<0||canvasX>canvas.width||canvasY<0||canvasY>canvas.height){ tooltip.style.opacity='0'; return; }
+            const pc = toPhaseX(canvasX), pt = toPhaseY(canvasY);
+            const region = regions.find(r=>pointInPoly(pc,pt,r.points));
+            tooltip.style.opacity='1';
+            let html = `📍 C: ${pc.toFixed(3)}% · T: ${pt.toFixed(0)}℃<br>`;
+            if(region) html += `<b>${region.name}</b><br>📊 ${region.rangeC}<br>🌡️ ${region.rangeT}<br>📖 ${region.desc}`;
+            else html += `<span style="color:#ccc;">(边界区)</span>`;
+            tooltip.innerHTML = html;
+            tooltip.style.left=(cx+15)+'px'; tooltip.style.top=(cy-30)+'px';
+            document.getElementById('calcInput').value = pc.toFixed(3);
+            computeLever();
+        }
+
+        canvas.addEventListener('mousemove', handleMove);
+        canvas.addEventListener('touchmove', handleMove, {passive: false});
+        canvas.addEventListener('touchstart', (e)=>{ if(!pathMode&&!draggingAnnotation){ e.preventDefault(); handleMove(e); } }, {passive: false});
+        canvas.addEventListener('mouseleave', ()=>tooltip.style.opacity='0');
+        canvas.addEventListener('touchend', ()=>tooltip.style.opacity='0');
+
+        function handleCanvasClick(e){
+            if (pathMode || draggingAnnotation) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width/rect.width;
+            let cx = e.touches ? e.touches[0].clientX : e.clientX;
+            const canvasX = (cx - rect.left)*scaleX;
+            let C = toPhaseX(canvasX);
+            C = Math.min(C_MAX, Math.max(C_MIN, C));
+            slider.value = C;
+            refreshAll();
+            updateURL();
+            document.getElementById('calcInput').value = C.toFixed(3);
+            computeLever();
+        }
+        canvas.addEventListener('click', handleCanvasClick);
+        canvas.addEventListener('touchstart', (e)=>{ if(!pathMode&&!draggingAnnotation) handleCanvasClick(e); }, {passive: false});
+
+        document.getElementById('pathModeBtn').addEventListener('click', function(){
+            pathMode = !pathMode;
+            this.classList.toggle('active', pathMode);
+            document.getElementById('clearPathBtn').style.display = pathMode ? 'inline-block' : 'none';
+            if (!pathMode && currentPath.length > 1) { savedPaths.push([...currentPath]); refreshAll(); updateURL(); }
+            currentPath = [];
+            drawPhase();
+        });
+        document.getElementById('clearPathBtn').addEventListener('click', ()=>{ currentPath = []; drawPhase(); });
+        document.getElementById('clearAllPathsBtn').addEventListener('click', ()=>{
+            savedPaths = []; currentPath = [];
+            if (pathMode) {
+                pathMode = false;
+                document.getElementById('pathModeBtn').classList.remove('active');
+                document.getElementById('clearPathBtn').style.display = 'none';
+            }
+            drawPhase(); refreshAll(); updateURL();
+        });
+
+        canvas.addEventListener('dblclick', function(e){
+            e.preventDefault();
+            if (pathMode) {
+                if (currentPath.length > 1) savedPaths.push([...currentPath]);
+                currentPath = []; pathMode = false;
+                document.getElementById('pathModeBtn').classList.remove('active');
+                document.getElementById('clearPathBtn').style.display = 'none';
+                drawPhase(); refreshAll(); updateURL();
+                return;
+            }
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width/rect.width, scaleY = canvas.height/rect.height;
+            let cx = e.clientX, cy = e.clientY;
+            const canvasX = (cx - rect.left)*scaleX, canvasY = (cy - rect.top)*scaleY;
+            const c = toPhaseX(canvasX), t = toPhaseY(canvasY);
+            const text = prompt('输入标注文字：', '注释');
+            if (text) { annotations.push({c, t, text}); drawPhase(); updateURL(); }
+        });
+
+        canvas.addEventListener('mousedown', function(e){
+            if (pathMode) {
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width/rect.width, scaleY = canvas.height/rect.height;
+                let cx = e.clientX, cy = e.clientY;
+                const canvasX = (cx - rect.left)*scaleX, canvasY = (cy - rect.top)*scaleY;
+                const c = toPhaseX(canvasX), t = toPhaseY(canvasY);
+                currentPath.push({c, t}); drawPhase();
+                return;
+            }
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width/rect.width, scaleY = canvas.height/rect.height;
+            const mx = (e.clientX - rect.left)*scaleX, my = (e.clientY - rect.top)*scaleY;
+            for (let i = annotations.length-1; i >=0; i--) {
+                const ann = annotations[i];
+                const ax = toCanvasX(ann.c), ay = toCanvasY(ann.t);
+                if (Math.abs(mx - ax) < 30 && Math.abs(my - ay) < 20) {
+                    draggingAnnotation = i; dragOffsetX = mx - ax; dragOffsetY = my - ay;
+                    canvas.style.cursor = 'grab'; e.stopPropagation(); break;
+                }
+            }
+        });
+        window.addEventListener('mousemove', function(e){
+            if (draggingAnnotation !== null) {
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width/rect.width, scaleY = canvas.height/rect.height;
+                const mx = (e.clientX - rect.left)*scaleX, my = (e.clientY - rect.top)*scaleY;
+                const nx = mx - dragOffsetX, ny = my - dragOffsetY;
+                annotations[draggingAnnotation].c = toPhaseX(nx);
+                annotations[draggingAnnotation].t = toPhaseY(ny);
+                drawPhase();
+            }
+        });
+        window.addEventListener('mouseup', ()=>{ if (draggingAnnotation !== null) { draggingAnnotation = null; canvas.style.cursor = 'crosshair'; updateURL(); } });
+
+        canvas.addEventListener('touchstart', function(e){
+            if (pathMode || draggingAnnotation !== null) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width/rect.width, scaleY = canvas.height/rect.height;
+            const touch = e.touches[0];
+            const mx = (touch.clientX - rect.left)*scaleX, my = (touch.clientY - rect.top)*scaleY;
+            for (let i=annotations.length-1;i>=0;i--) {
+                const ann = annotations[i];
+                const ax = toCanvasX(ann.c), ay = toCanvasY(ann.t);
+                if (Math.abs(mx-ax) < 30 && Math.abs(my-ay) < 20) {
+                    draggingAnnotation = i; dragOffsetX = mx - ax; dragOffsetY = my - ay; e.preventDefault(); break;
+                }
+            }
+        }, {passive: false});
+        canvas.addEventListener('touchmove', function(e){
+            if (draggingAnnotation !== null) {
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width/rect.width, scaleY = canvas.height/rect.height;
+                const touch = e.touches[0];
+                const mx = (touch.clientX - rect.left)*scaleX, my = (touch.clientY - rect.top)*scaleY;
+                const nx = mx - dragOffsetX, ny = my - dragOffsetY;
+                annotations[draggingAnnotation].c = toPhaseX(nx);
+                annotations[draggingAnnotation].t = toPhaseY(ny);
+                drawPhase();
+            }
+        }, {passive: false});
+        canvas.addEventListener('touchend', ()=>{ if (draggingAnnotation !== null) { draggingAnnotation = null; updateURL(); } });
+
+        let currentCooling = 'furnace';
+        const coolingRates = { furnace:0.05, air:0.8, oil:8, water:150 };
+
+        function leverRule(C){
+            if(C<0.0218) return {F:100, P:0, Fe3C:0, type:'工业纯铁'};
+            if(C<0.77){
+                let f = (0.77-C)/(0.77-0.0218)*100;
+                return {F:f, P:100-f, Fe3C:0, type:'亚共析钢'};
+            }
+            if(Math.abs(C-0.77)<0.01) return {F:0, P:100, Fe3C:0, type:'共析钢'};
+            if(C<=2.11){
+                let fe = (C-0.77)/(6.69-0.77)*100;
+                return {F:0, P:100-fe, Fe3C:fe, type:'过共析钢'};
+            }
+            if(C<4.3) {
+                let primaryAustenite = (4.3-C)/(4.3-2.11)*100;
+                let ledeburite = (C-2.11)/(4.3-2.11)*100;
+                return {type:'亚共晶白口铁', primaryPhase: '初生奥氏体', primaryPercent: primaryAustenite, ledeburitePercent: ledeburite, note:'室温：P+Fe₃CⅡ+Ld\''};
+            }
+            if(Math.abs(C-4.3)<0.01) return {type:'共晶白口铁', ledeburitePercent:100, note:'Ld\''};
+            let primaryCementite = (C-4.3)/(6.69-4.3)*100;
+            let ledeburite = (6.69-C)/(6.69-4.3)*100;
+            return {type:'过共晶白口铁', primaryPhase: '一次渗碳体 Fe₃CⅠ', primaryPercent: primaryCementite, ledeburitePercent: ledeburite, note:'Fe₃CⅠ+Ld\''};
+        }
+
+        function getTransPoints(C, rate){
+            let arr = [];
+            let Tliq = C<0.53?1538-(1538-1495)*C/0.53:(C<4.3?1495-(1495-1148)*(C-0.53)/(4.3-0.53):1148-(1148-1227)*(C-4.3)/(6.69-4.3));
+            arr.push({temp:Tliq, label:'液相线'});
+            let A3=(C<0.77)?912-(912-727)*C/0.77:null;
+            let Acm=(C>0.77&&C<=2.11)?727+(1148-727)*(C-0.77)/(2.11-0.77):null;
+            if(rate==='furnace'){
+                if(A3) arr.push({temp:A3, label:'A₃'});
+                if(Acm) arr.push({temp:Acm, label:'Acm'});
+                if(C>0.0218) arr.push({temp:727, label:'A₁'});
+            }else{
+                let u=rate==='air'?30:(rate==='oil'?80:150);
+                if(A3) arr.push({temp:Math.max(A3-u*0.6,600), label:'A₃过冷'});
+                if(Acm) arr.push({temp:Math.max(Acm-u*0.5,650), label:'Acm过冷'});
+                if(rate==='oil'||rate==='water'){
+                    arr.push({temp:550-20*C, label:'Bs'});
+                    arr.push({temp:Math.max(500-350*C-40,200), label:'Ms'});
+                }
+                if(C>0.0218) arr.push({temp:rate==='water'?250:550, label:'非平衡'});
+            }
+            return arr.sort((a,b)=>b.temp-a.temp);
+        }
+
+        function drawCooling(C, rateKey){
+            const w = coolCanvas.width, h = coolCanvas.height;
+            cctx.clearRect(0,0,w,h);
+            const colors = { furnace:'#2563eb', air:'#16a34a', oil:'#d97706', water:'#dc2626' };
+            const allRates = ['furnace','air','oil','water'];
+            allRates.forEach(rate => {
+                const rateVal = coolingRates[rate];
+                const trans = getTransPoints(C, rate);
+                const tMax = rate==='furnace'?8:(rate==='air'?5:(rate==='oil'?3.5:2.2));
+                const toLogX = t => 40 + (Math.log(t+1)/Math.log(tMax+1))*(w-90);
+                cctx.beginPath(); cctx.strokeStyle = colors[rate]; cctx.lineWidth = (rate===rateKey)?4:2;
+                let lastT = trans[0]?.temp||1500;
+                let x=40, y=h-40-(lastT/1600)*(h-80); cctx.moveTo(x,y);
+                for(let i=1;i<=20;i++){
+                    let t=i/20*tMax, T=Math.max(lastT - rateVal*t*5, 20);
+                    cctx.lineTo(toLogX(t), h-40-(T/1600)*(h-80));
+                }
+                cctx.stroke();
+                if(rate===rateKey){
+                    trans.forEach(pt=>{
+                        let tEst = (lastT-pt.temp)/(rateVal*5); if(tEst<0.1) tEst=0.2;
+                        let px=toLogX(Math.min(tEst,tMax)), py=h-40-(pt.temp/1600)*(h-80);
+                        cctx.beginPath(); cctx.arc(px,py,5,0,2*Math.PI); cctx.fillStyle='#0f172a'; cctx.fill();
+                    });
+                }
+            });
+            cctx.fillStyle='#1e293b'; cctx.font='11px sans'; cctx.fillText('时间 →',w-70,h-10); cctx.fillText('T°C',10,20);
+            updateTable(C, rateKey, getTransPoints(C,rateKey));
+        }
+
+        function updateTable(C, rateKey, trans){
+            const tbody = document.getElementById('phaseTableBody');
+            tbody.innerHTML = '';
+            trans.forEach(p=>{ tbody.innerHTML += `<tr><td>${p.label}</td><td>${p.temp.toFixed(0)}</td><td>${p.label.includes('A₁')?'共析':''}</td></tr>`; });
+        }
+
+        const slider = document.getElementById('carbonSlider');
+        const spanC = document.getElementById('carbonValue');
+        function refreshAll(){
+            let C = parseFloat(slider.value);
+            spanC.textContent = C.toFixed(2)+'%';
+            drawCooling(C, currentCooling);
+        }
+        slider.addEventListener('input', ()=>{ refreshAll(); updateURL(); });
+        document.querySelectorAll('.cooling-btn').forEach(btn=>{
+            btn.addEventListener('click', ()=>{
+                document.querySelectorAll('.cooling-btn').forEach(b=>b.classList.remove('active'));
+                btn.classList.add('active');
+                currentCooling = btn.dataset.rate;
+                refreshAll();
+                updateURL();
+            });
+        });
+
+        function computeLever(){
+            const input = document.getElementById('calcInput');
+            let C = parseFloat(input.value);
+            if (isNaN(C)) C = 0;
+            C = Math.min(C_MAX, Math.max(C_MIN, C));
+            const lever = leverRule(C);
+            let result = '';
+            if (lever.F !== undefined) {
+                result = `铁素体 F: ${lever.F.toFixed(1)}% · 珠光体 P: ${lever.P.toFixed(1)}%`;
+                if (lever.Fe3C > 0) result += ` · 二次渗碳体 Fe₃CⅡ: ${lever.Fe3C.toFixed(1)}%`;
+            } else if (lever.type.includes('白口铁')) {
+                if (lever.primaryPhase) {
+                    result = `${lever.primaryPhase}: ${lever.primaryPercent.toFixed(1)}% · 莱氏体 Ld': ${lever.ledeburitePercent.toFixed(1)}%`;
+                } else {
+                    result = `莱氏体 Ld' 100%`;
+                }
+            } else {
+                result = lever.type + (lever.note ? ` (${lever.note})` : '');
+            }
+            document.getElementById('leverResult').innerHTML = result;
+        }
+        document.getElementById('calcInput').addEventListener('input', computeLever);
+
+        document.getElementById('exportBtn').addEventListener('click', ()=>{
+            const exportCanvas = document.createElement('canvas');
+            const scale = 2;
+            exportCanvas.width = (canvas.width + coolCanvas.width + 40) * scale;
+            exportCanvas.height = Math.max(canvas.height, coolCanvas.height) * scale + 60;
+            const ectx = exportCanvas.getContext('2d');
+            ectx.scale(scale, scale);
+            ectx.fillStyle = 'white'; ectx.fillRect(0,0,exportCanvas.width/scale, exportCanvas.height/scale);
+            ectx.drawImage(canvas, 0, 0);
+            ectx.drawImage(coolCanvas, canvas.width + 20, 20);
+            const link = document.createElement('a'); link.download = 'Fe-C-Phase.png'; link.href = exportCanvas.toDataURL(); link.click();
+            showMessage('截图已保存');
+        });
+
+        function getStateString(){
+            const state = { C: slider.value, cool: currentCooling, annotations: annotations.map(a=>({c:a.c.toFixed(4), t:a.t.toFixed(1), text:a.text})), paths: savedPaths.map(p=>p.map(pt=>({c:pt.c.toFixed(4), t:pt.t.toFixed(1)}))) };
+            return encodeURIComponent(JSON.stringify(state));
+        }
+        function loadStateFromHash(){
+            const hash = window.location.hash;
+            if (!hash) return;
+            try {
+                const data = JSON.parse(decodeURIComponent(hash.substring(1)));
+                if (data.C) slider.value = data.C;
+                if (data.cool) { currentCooling = data.cool; document.querySelectorAll('.cooling-btn').forEach(b=>b.classList.remove('active')); document.querySelector(`[data-rate="${data.cool}"]`).classList.add('active'); }
+                if (data.annotations) annotations = data.annotations.map(a=>({c:Number(a.c), t:Number(a.t), text:a.text}));
+                if (data.paths) savedPaths = data.paths.map(p=>p.map(pt=>({c:Number(pt.c), t:Number(pt.t)})));
+                refreshAll(); drawPhase();
+                document.getElementById('calcInput').value = parseFloat(slider.value).toFixed(3); computeLever();
+            } catch(e){}
+        }
+        function updateURL(){ history.replaceState(null, '', '#' + getStateString()); }
+        document.getElementById('shareBtn').addEventListener('click', ()=>{ updateURL(); navigator.clipboard.writeText(window.location.href).then(()=> showMessage('链接已复制')).catch(()=> showMessage('复制失败')); });
+        function showMessage(msg){ const el=document.getElementById('message'); el.textContent=msg; setTimeout(()=>el.textContent='',2000); }
+
+        loadStateFromHash();
+        drawPhase();
+        refreshAll();
+        computeLever();
+        window.addEventListener('resize', ()=>{ drawPhase(); });
+    })();
+</script>
+</body>
+</html>
